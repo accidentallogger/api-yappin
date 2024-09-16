@@ -14,7 +14,7 @@ from pathlib import Path
 # Add these at the top of your settings.py
 from os import getenv
 from dotenv import load_dotenv
-
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -56,7 +56,7 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-
+DATABASES['default']=dj_database_url.parse("postgresql://adminyapp:osUbDIB7enf6n6JMaq7WgPC5jGJdlnV3@dpg-crjsf93tq21c73a5mp80-a/yapp_wga1")
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
