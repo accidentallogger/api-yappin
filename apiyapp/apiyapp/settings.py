@@ -46,17 +46,17 @@ INSTALLED_APPS = [
 ]
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'yapp',
-        'USER': 'adminyapp',
-        'PASSWORD': 'admin',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
-DATABASES['default']=dj_database_url.parse("postgresql://adminyapp:osUbDIB7enf6n6JMaq7WgPC5jGJdlnV3@dpg-crjsf93tq21c73a5mp80-a/yapp_wga1")
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.postgresql',
+#        'NAME': 'yapp',
+#        'USER': 'adminyapp',
+ #       'PASSWORD': 'admin',
+  #      'HOST': 'localhost',
+   #     'PORT': '5432',
+    #}
+#}
+DATABASES={"default":dj_database_url.parse("postgresql://adminyapp:osUbDIB7enf6n6JMaq7WgPC5jGJdlnV3@dpg-crjsf93tq21c73a5mp80-a/yapp_wga1")}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
