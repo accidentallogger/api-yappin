@@ -231,8 +231,4 @@ The **Outfit Recommendation API** is designed to handle user and apparel data ma
 
 - **Outfit Scoring System**: Introduce a rating or scoring system where users can rate their outfit combinations, and the system can use this data to provide better recommendations in the future.
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ---
