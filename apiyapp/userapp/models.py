@@ -5,7 +5,7 @@ class User(models.Model):
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=100)
     gender = models.CharField(null=True, max_length=20, default="not specified")
-    age = models.IntegerField(null=True, default=5)  # Changed variable name to 'age' (lowercase)
+    Age = models.IntegerField(null=True, default=5)  
     bio = models.CharField(null=True, default="hi", max_length=255)  # Set a max_length for bio
 
 class Apparel(models.Model):
@@ -20,6 +20,8 @@ class Apparel(models.Model):
     upper_lower = models.CharField(max_length=50)  # e.g., "upper" or "lower"
     type = models.CharField(max_length=50)  # e.g., "shirt", "pants"
     image = models.ImageField(upload_to='apparels/', blank=True, null=True)  # Use ImageField for storing apparel images
+    def __str__(self):
+        return f"{self.occasion} {self.type} {self.upper_lower} {self.color} - {self.ownership.username}"
 
 class Recommendation(models.Model):
     ownership = models.ForeignKey(User, on_delete=models.CASCADE)

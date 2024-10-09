@@ -15,7 +15,7 @@ from pathlib import Path
 from os import getenv
 from dotenv import load_dotenv
 
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -30,7 +30,8 @@ SECRET_KEY = 'django-insecure-qy$ht+*c5u++^nh&9^ji71&01wqs55^4-wuzcz&%m0lskjqipl
 DEBUG = True
 
 ALLOWED_HOSTS = ["*","192.168.1.18","localhost"]
-
+MEDIA_URL = '/media/'  # URL prefix for media files
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
 
 # Application definition
 
