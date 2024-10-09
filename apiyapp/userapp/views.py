@@ -274,10 +274,9 @@ class GetLastCombinationsView(APIView):
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-
 import os
-import base64
 import random
+import base64
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -287,32 +286,31 @@ from PIL import Image
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Apparel
+from .models import Apparel  # Import your Apparel model
 
-# Image preprocessing function
-def preprocess_image(image):
+# Define the base directory for images
+BASE_DIR = "media/"
+
+# Define the image preprocessing function
+def preprocess_image(image_path):
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+    image = Image.open(image_path).convert('RGB')
     return transform(image).unsqueeze(0)
 
-# Base64 decoding function
-def decode_base64_image(data):
-    image_data = base64.b64decode(data)
-    return Image.open(BytesIO(image_data)).convert('RGB')
-
-# Model definition (ResNet-18 based outfit recommender)
+# Define the Simple Outfit Recommender model
 class SimpleOutfitRecommender(nn.Module):
     def __init__(self):
         super(SimpleOutfitRecommender, self).__init__()
         
-        # Feature extractor (ResNet-18)
+        # Feature Extractor (ResNet-18)
         self.feature_extractor = models.resnet18(pretrained=True)
         self.feature_extractor = nn.Sequential(*list(self.feature_extractor.children())[:-1])
         
-        # Binary classifier
+        # Binary Classifier
         self.classifier = nn.Sequential(
             nn.Linear(512 * 2, 256),  # 512 features for each item
             nn.ReLU(),
@@ -326,78 +324,90 @@ class SimpleOutfitRecommender(nn.Module):
         combined_features = torch.cat((shirt_features, pants_features), dim=1)
         return self.classifier(combined_features)
 
-# View for outfit recommendation
+# Function to get image pools based on ownership and occasion
+def get_image_pools(ownership, occasion):
+    shirt_pool = []
+    pant_pool = []
+    
+    # Fetch apparel items for the given ownership and occasion
+    shirts = Apparel.objects.filter(ownership=ownership, upper_lower='upper', occasion=occasion)
+    pants = Apparel.objects.filter(ownership=ownership, upper_lower='lower', occasion=occasion)
+    print(shirts)
+    # Save images to the specified directory if they exist
+    for shirt in shirts:
+        shirt_image_path = shirt.image.path  # Assuming 'image' is the field for the image
+        shirt_pool.append(shirt_image_path)
+        save_image_to_directory(ownership, occasion, "upper", shirt_image_path)
+    
+    for pant in pants:
+        pant_image_path = pant.image.path
+        pant_pool.append(pant_image_path)
+        save_image_to_directory(ownership, occasion, "lower", pant_image_path)
+    
+    return shirt_pool, pant_pool
+
+# Function to save image to the appropriate directory
+def save_image_to_directory(ownership, occasion, apparel_type, image_path):
+    dir_path = os.path.join(BASE_DIR, str(ownership), occasion, apparel_type)
+    os.makedirs(dir_path, exist_ok=True)
+    # Save a copy of the image in the specified directory
+    image = Image.open(image_path)
+    image.save(os.path.join(dir_path, os.path.basename(image_path)))
+
+# Convert an image to base64 format
+def image_to_base64(image):
+    buffered = BytesIO()
+    image.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+# Define the Django view for outfit recommendation
 class RecommendOutfitView(APIView):
     def post(self, request):
-        user_id = request.data.get('user_id')
+        user_id = request.data.get('ownership')
         occasion = request.data.get('occasion')
 
-        # Fetch upper and lower apparels for the user
-        shirts = Apparel.objects.filter(ownership=user_id, upper_lower='upper', occasion=occasion)
-        pants = Apparel.objects.filter(ownership=user_id, upper_lower='lower', occasion=occasion)
+        if not user_id or not occasion:
+            return Response({'error': 'user_id and occasion are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if any shirts or pants are found
-        if not shirts.exists() or not pants.exists():
-            return Response({'error': 'No shirts or pants found for the given criteria'}, status=status.HTTP_404_NOT_FOUND)
+        # Get the appropriate image pools based on user input
+        shirt_pool, pant_pool = get_image_pools(user_id, occasion)
 
-        # Create directory for saving images
-        base_dir = os.path.join(settings.MEDIA_ROOT, 'recommendations', str(user_id), occasion)
-        os.makedirs(os.path.join(base_dir, 'upper'), exist_ok=True)
-        os.makedirs(os.path.join(base_dir, 'lower'), exist_ok=True)
+        # Check if there are available shirts and pants
+        if not shirt_pool or not pant_pool:
+            return Response({'error': 'No available outfits for the specified user and occasion.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Save the filtered images to their respective folders
-        for shirt in shirts:
-            shirt_image = decode_base64_image(shirt.image.read())
-            shirt_image.save(os.path.join(base_dir, 'upper', f"{shirt.id}.jpg"))
-
-        for pant in pants:
-            pant_image = decode_base64_image(pant.image.read())
-            pant_image.save(os.path.join(base_dir, 'lower', f"{pant.id}.jpg"))
-
-        # Convert images to lists for model input
-        shirt_pool = [decode_base64_image(shirt.image.read()) for shirt in shirts]
-        pant_pool = [decode_base64_image(pant.image.read()) for pant in pants]
-
-        # Load the model
         model = SimpleOutfitRecommender()
         model.eval()  # Set the model to evaluation mode
 
-        # Function to recommend an outfit based on the model
-        def recommend_outfit(model, shirt_pool, pant_pool, num_combinations=10):
-            best_outfit = None
-            best_score = -1
+        best_outfit = None
+        best_score = -1
 
-            for _ in range(num_combinations):
-                shirt = random.choice(shirt_pool)
-                pants = random.choice(pant_pool)
+        # Generate multiple combinations to find the best outfit
+        for _ in range(10):  # You can adjust the number of combinations here
+            shirt_path = random.choice(shirt_pool)
+            pant_path = random.choice(pant_pool)
+            
+            shirt_tensor = preprocess_image(shirt_path)
+            pants_tensor = preprocess_image(pant_path)
+            
+            with torch.no_grad():
+                score = model(shirt_tensor, pants_tensor).item()
+            
+            if score > best_score:
+                best_score = score
+                best_outfit = (shirt_path, pant_path)
 
-                shirt_tensor = preprocess_image(shirt)
-                pants_tensor = preprocess_image(pants)
+        # Convert the recommended outfit images to base64
+        if best_outfit:
+            shirt_image = Image.open(best_outfit[0])
+            pants_image = Image.open(best_outfit[1])
+            shirt_image_base64 = image_to_base64(shirt_image)
+            pants_image_base64 = image_to_base64(pants_image)
 
-                with torch.no_grad():
-                    score = model(shirt_tensor, pants_tensor).item()
-
-                if score > best_score:
-                    best_score = score
-                    best_outfit = (shirt, pants)
-
-            return best_outfit, best_score
-
-        # Apply the model to get the best recommendation
-        best_outfit, best_score = recommend_outfit(model, shirt_pool, pant_pool, num_combinations=10)
-
-        # Convert the recommended images back to base64
-        def image_to_base64(image):
-            buffered = BytesIO()
-            image.save(buffered, format="jpg")
-            return base64.b64encode(buffered.getvalue()).decode('utf-8')
-
-        shirt_image_base64 = image_to_base64(best_outfit[0])
-        pant_image_base64 = image_to_base64(best_outfit[1])
-
-        # Return the best recommendation with the highest score
-        return Response({
-            'shirt': shirt_image_base64,
-            'pants': pant_image_base64,
-            'score': best_score
-        }, status=status.HTTP_200_OK)
+            return Response({
+                'shirt': shirt_image_base64,
+                'pants': pants_image_base64,
+                'score': best_score
+            }, status=status.HTTP_200_OK)
+        
+        return Response({'error': 'No outfit recommendations found.'}, status=status.HTTP_404_NOT_FOUND)

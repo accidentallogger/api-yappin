@@ -21,7 +21,7 @@ class Apparel(models.Model):
     type = models.CharField(max_length=50)  # e.g., "shirt", "pants"
     image = models.ImageField(upload_to='apparels/', blank=True, null=True)  # Use ImageField for storing apparel images
     def __str__(self):
-        return f"{self.occasion} {self.type} {self.upper_lower} {self.color} - {self.ownership.username}"
+        return f"{self.occasion} {self.type} {self.upper_lower} {self.color} - {self.ownership.name}"
 
 class Recommendation(models.Model):
     ownership = models.ForeignKey(User, on_delete=models.CASCADE)
