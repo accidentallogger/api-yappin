@@ -9,7 +9,7 @@ from apiyapp import settings
 from .models import Apparel
 from .models import User, Combination, Apparel
 from django.core.files.base import ContentFile
-from .recommendationsystem import *
+#from .recommendationsystem import *
 import random
 import os
 class CreateUserView(APIView):
@@ -186,7 +186,7 @@ class GetAllApparelsByEmail(APIView):
                     'id': apparel.id,  # Include apparel ID or any other relevant info
                     'image': encoded_image,
                 })
-
+                
             return Response(apparel_list, status=status.HTTP_200_OK)
         
         except User.DoesNotExist:

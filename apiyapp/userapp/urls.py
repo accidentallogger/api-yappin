@@ -10,8 +10,8 @@ from .views import (
 
 urlpatterns = [
     path('users/', CreateUserView.as_view(), name='create_user'),
-    path('users/email/check/<str:email>/', CheckEmailExistsView.as_view(), name='check_email'),
-    path('users/name/check/<str:name>/', CheckNameExistsView.as_view(), name='check_name'),
+    path('users/email/<str:email>/', CheckEmailExistsView.as_view(), name='check_email'),
+    path('users/name/<str:name>/', CheckNameExistsView.as_view(), name='check_name'),
     path('users/password/email/<str:email>/', GetPasswordByEmailView.as_view(), name='get_password_email'),
     path('users/password/name/<str:name>/email/<str:email>/', GetPasswordByNameAndEmailView.as_view(), name='get_password_name_email'),
     path('users/id/email/<str:email>/', GetUserIdByEmailView.as_view(), name='get_user_id_email'),
