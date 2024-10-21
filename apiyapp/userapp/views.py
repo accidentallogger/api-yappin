@@ -7,7 +7,7 @@ import base64
 from django.http import JsonResponse
 from apiyapp import settings 
 from .models import Apparel
-from .models import User, Combination, Apparel
+from .models import User, Combination, Apparel,Recommendation, Combination, UpperAccessories, Shoes 
 from django.core.files.base import ContentFile
 #from .recommendationsystem import *
 import random
@@ -112,15 +112,17 @@ class CreateApparelView(APIView):
     def post(self, request):
         # Get the base64 image data from the request
         image_base64 = request.data.get('image')
+        print(image_base64)
 
         # Prepare the data for the serializer
         apparel_data = {
-            'ownership': request.data.get('ownership'),
-            'upper_lower': request.data.get('upper_lower'),
-            'occasion': request.data.get('occasion'),
-            'color':request.data.get('color'),
-            'material':request.data.get('material'),
+            'ownership': int(request.data.get('ownership')),
+            'upper_lower': (request.data.get('upper_lower')).lower(),
+            'occasion': request.data.get('occasion').upper(),
+            'color':request.data.get('color').lower(),
+            'material':request.data.get('material').lower(),
         }
+        print(apparel_data)
 
         # Decode the base64 image and save it as a file
         if image_base64:
@@ -155,9 +157,9 @@ class ApparelByTypeAndEmailView(APIView):
                 encoded_image = base64.b64encode(apparel_image_data).decode('utf-8')  # Convert to base64 string
                 apparel_list.append({
                     'id': apparel.id,  # Include apparel ID or any other relevant info
-                    'image': encoded_image,
+                    'image': "data:image/jpeg;base64,"+ encoded_image,
                 })
-
+            print(type(apparel_list[0]["image"]))
             return Response(apparel_list, status=status.HTTP_200_OK)
         
         except User.DoesNotExist:
@@ -183,10 +185,10 @@ class GetAllApparelsByEmail(APIView):
                 apparel_image_data = apparel.image.read()  # Read the image file
                 encoded_image = base64.b64encode(apparel_image_data).decode('utf-8')  # Convert to base64 string
                 apparel_list.append({
-                    'id': apparel.id,  # Include apparel ID or any other relevant info
-                    'image': encoded_image,
+                    'id': str(apparel.id),  # Include apparel ID or any other relevant info
+                    'image': "data:image/jpeg;base64,"+ encoded_image,
                 })
-                
+            print(type(apparel_list[0]["image"]))
             return Response(apparel_list, status=status.HTTP_200_OK)
         
         except User.DoesNotExist:
@@ -201,7 +203,7 @@ class GetAllApparelsByEmail(APIView):
 class PostCombinationView(APIView):
     def post(self, request, *args, **kwargs):
         ownership = request.data.get('ownership')
-        occasion = request.data.get('occasion')
+        #occasion = request.data.get('occasion')
         image_base64 = request.data.get('image')  # Assuming image is base64-encoded
         # apparels = request.data.getlist('apparels')  # Array of apparel IDs
 
@@ -240,9 +242,9 @@ class PostCombinationView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 class GetLastCombinationsView(APIView):
     def post(self, request, *args, **kwargs):
-        ownership_id = request.data.get('ownership_id')  # Get ownership_id from the POST request body
+        ownership_id = int(request.data.get('ownership'))  # Get ownership_id from the POST request body
 
-        if not ownership_id or not str(ownership_id).isdigit():
+        if not ownership_id:
             return Response({"error": "Invalid ownership ID"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -255,15 +257,18 @@ class GetLastCombinationsView(APIView):
             serialized_combinations = []
             for combination in combinations:
                 combination_data = {
-                    "id": combination.id,
-                    "owner": combination.ownership.name,
-                    "occasion": combination.occasion,
-                    "date_posted": combination.date_posted,
+                    "id": str(combination.id),
+                    "owner": str(combination.ownership.name),
+                    "occasion": str(combination.occasion),
+                    "date_posted": str(combination.date_posted),
+                    #"apparels":str(combination.apparels)
+                    #"shoes":str(combination.shoes),
+                    #"upperaccessories":str(combination.upperaccessories)
                 }
                 # Serialize the image
                 if combination.image:
                     with combination.image.open('rb') as img_file:
-                        combination_data['image'] = base64.b64encode(img_file.read()).decode('utf-8')
+                        combination_data['image'] = "data:image/jpeg;base64," +  base64.b64encode(img_file.read()).decode('utf-8')
                 else:
                     combination_data['image'] = None
 
@@ -273,6 +278,46 @@ class GetLastCombinationsView(APIView):
 
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class GetAllCombinationsView(APIView):
+    def post(self, request, *args, **kwargs):
+        print(str(request.body))
+        ownership_id = int(request.data.get("ownership"))  # Get ownership_id from the POST request body
+
+        if not ownership_id:
+            return Response({"error": "Invalid ownership ID"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=ownership_id)
+
+            # Get the all combinations
+            combinations = Combination.objects.filter(ownership=user)
+
+            # Serialize the combinations
+            serialized_combinations = []
+            for combination in combinations:
+                combination_data = {
+                    "id": str(combination.id),
+                    "owner": str(combination.ownership.name),
+                    "occasion": str(combination.occasion),
+                    #"apparels":str(combination.apparels)
+                    #"shoes":str(combination.shoes),
+                    #"upperaccessories":str(combination.upperaccessories)
+                }
+                # Serialize the image
+                if combination.image:
+                    with combination.image.open('rb') as img_file:
+                        combination_data['image'] = "data:image/jpeg;base64," +  base64.b64encode(img_file.read()).decode('utf-8')
+                else:
+                    combination_data['image'] = None
+
+                serialized_combinations.append(combination_data)
+
+            return Response(serialized_combinations, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 import os
 import random
@@ -323,6 +368,8 @@ class SimpleOutfitRecommender(nn.Module):
         pants_features = self.feature_extractor(pants).view(-1, 512)
         combined_features = torch.cat((shirt_features, pants_features), dim=1)
         return self.classifier(combined_features)
+import os
+from django.core.exceptions import ObjectDoesNotExist
 
 # Function to get image pools based on ownership and occasion
 def get_image_pools(ownership, occasion):
@@ -332,7 +379,7 @@ def get_image_pools(ownership, occasion):
     # Fetch apparel items for the given ownership and occasion
     shirts = Apparel.objects.filter(ownership=ownership, upper_lower='upper', occasion=occasion)
     pants = Apparel.objects.filter(ownership=ownership, upper_lower='lower', occasion=occasion)
-    print(shirts)
+    
     # Save images to the specified directory if they exist
     for shirt in shirts:
         shirt_image_path = shirt.image.path  # Assuming 'image' is the field for the image
@@ -360,11 +407,10 @@ def image_to_base64(image):
     image.save(buffered, format="JPEG")
     return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-# Define the Django view for outfit recommendation
 class RecommendOutfitView(APIView):
     def post(self, request):
-        user_id = request.data.get('ownership')
-        occasion = request.data.get('occasion')
+        user_id = int(request.data.get('ownership'))
+        occasion = request.data.get('occasion').upper()
 
         if not user_id or not occasion:
             return Response({'error': 'user_id and occasion are required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -386,13 +432,13 @@ class RecommendOutfitView(APIView):
         for _ in range(10):  # You can adjust the number of combinations here
             shirt_path = random.choice(shirt_pool)
             pant_path = random.choice(pant_pool)
-            
+
             shirt_tensor = preprocess_image(shirt_path)
             pants_tensor = preprocess_image(pant_path)
-            
+
             with torch.no_grad():
                 score = model(shirt_tensor, pants_tensor).item()
-            
+
             if score > best_score:
                 best_score = score
                 best_outfit = (shirt_path, pant_path)
@@ -404,10 +450,47 @@ class RecommendOutfitView(APIView):
             shirt_image_base64 = image_to_base64(shirt_image)
             pants_image_base64 = image_to_base64(pants_image)
 
+            # Create the Combination instance
+            #combination = Combination.objects.create(
+             #   ownership=User.objects.get(id=user_id),
+              #  occasion=occasion,
+            #)
+
+            # Assuming image is stored as a filename in the Apparel model
+            shirt_filename = os.path.basename(best_outfit[0])
+            pant_filename = os.path.basename(best_outfit[1])
+
+       #     try:
+        #        shirt_apparel = Apparel.objects.get(image=shirt_filename)
+         #       pant_apparel = Apparel.objects.get(image=pant_filename)
+          #  except ObjectDoesNotExist:
+           #     return Response({'error': 'One or both apparel items not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Add the Apparel instances to the Combination
+            #combination.apparels.add(shirt_apparel, pant_apparel)
+
+            # Assuming you have logic to determine upper accessories and shoes
+            #upper_accessories = []  # Replace with actual logic
+            #shoes = None  # Replace with actual logic
+
+            # Add related items to the Combination instance
+           # if upper_accessories:
+            #    combination.upperaccessories.set(upper_accessories)  # Set many-to-many field
+           # if shoes:
+            #    combination.shoes = shoes
+             #   combination.save()  # Save the combination instance with shoes
+
+            # Create the Recommendation instance
+           # Recommendation.objects.create(
+            #    ownership=User.objects.get(id=user_id),
+             #   combination_id=combination,
+              #  acceptance=best_score,
+            #)
+
             return Response({
-                'shirt': shirt_image_base64,
-                'pants': pants_image_base64,
-                'score': best_score
+                'upper_image': "data:image/jpeg;base64," + shirt_image_base64,
+                'lower_image': "data:image/jpeg;base64," + pants_image_base64,
+                'score': str(best_score)
             }, status=status.HTTP_200_OK)
-        
+
         return Response({'error': 'No outfit recommendations found.'}, status=status.HTTP_404_NOT_FOUND)

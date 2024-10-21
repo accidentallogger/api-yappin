@@ -5,7 +5,7 @@ from .views import (
     UpdateUserView, GetUserByIdView, GetUserByEmailView, GetGenderByEmailView, 
     UpdateUserProfileView,  CreateApparelView,
     GetAllApparelsByEmail, ApparelByTypeAndEmailView, PostCombinationView, 
-    GetLastCombinationsView, RecommendOutfitView
+    GetLastCombinationsView, RecommendOutfitView, GetAllCombinationsView
 )
 
 urlpatterns = [
@@ -29,6 +29,7 @@ urlpatterns = [
 
     path('combinations/post/', PostCombinationView.as_view(), name='post_combination'),
     path('combinations/last/', GetLastCombinationsView.as_view(), name='get_last_combinations'),
-    
+    path('combinations/all/', GetAllCombinationsView.as_view(), name='get_all_combinations'),
+  
     path('outfit/recommendation/', RecommendOutfitView.as_view(), name='recommend_outfit'),  # API endpoint for outfit recommendation
 ]
