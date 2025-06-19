@@ -224,7 +224,7 @@ class PostCombinationView(APIView):
                 image_file = None  # No image provided
 
             # Create the combination object
-            combination = Combination(ownership=user, occasion=occasion, image=image_file)
+            combination = Combination(ownership=user, image=image_file) # occasion=occasion
             combination.save()
 
             # Add apparels to the combination (if you plan to use this in the future)
